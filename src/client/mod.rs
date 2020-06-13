@@ -25,14 +25,15 @@ impl Client {
         ) -> impl Future<Item = (Client, stream::GatewayConnection), Error = Error> + Send {
         let token = token.to_owned();
         {
-            let token_ref: &str = &token;
+            let auth_value = format!("Bot {}", token);
+            let auth_value_ref: &str = &auth_value;
             hyper_tls::HttpsConnector::new(1)
                 .map(|connector| hyper::Client::builder().build(connector))
                 .map_err(|e| e.into())
                 .into_future()
                 .join(
                     hyper::Request::get("https://discordapp.com/api/v6/gateway/bot")
-                    .header(hyper::header::AUTHORIZATION, token_ref)
+                    .header(hyper::header::AUTHORIZATION, auth_value_ref)
                     .body(Default::default())
                     .map_err(|e| Error::Other(format!("{:?}", e)))
                     )
@@ -89,6 +90,7 @@ impl Client {
         ) -> impl Future<Item = (), Error = Error> + Send {
         message.to_request_body(channel)
             .and_then(|body| {
+                // TODO: this is duped from send_message()
                 let auth_value = format!("Bot {}", self.token);
                 let auth_value_ref: &str = &auth_value;
                 hyper::Request::post(format!(
